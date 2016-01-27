@@ -33,7 +33,39 @@ class HTTPResponse(object):
         self.body = body
 
 class HTTPClient(object):
-    #def get_host_port(self,url):
+    #returns host, port, path
+    def get_host_port(self,url):
+        print("url: %s"% url)
+        urllist = url.split(":")
+        print("urllist: %s" % urllist)
+
+        #doesn't have a specific port
+        if (len(urllist) == 2):
+            hostlist = urllist[1].strip('/').split("/")
+            port = 80
+            host = hostlist[0].strip('/')
+            hostlist.pop(0)
+        #has a specific port
+        else:
+            print("here")
+            hostlist = urllist[2].strip('/').split("/")
+            port = hostlist[0]
+            hostlist.pop(0)
+            host = urllist[1].strip('/')
+        print("port: %s" %port)
+
+        print("hostlist: %s" %hostlist)
+        print("host: %s" % host)
+        #get path
+        path = ""
+        for i in range(0,len(hostlist)):
+            path += "/"
+            path += hostlist[i]
+        if (path==""):
+            path += "/"
+        print("path: %s" % path)
+
+        return host, port, path
 
     def connect(self, host, port):
         # use sockets!
@@ -68,35 +100,8 @@ class HTTPClient(object):
         return str(response)
 
     def GET(self, url, args=None):
-        #need to get host and port from url
-        print("url: %s"% url)
-        urllist = url.split(":")
-        print("urllist: %s" % urllist)
-
-        #doesn't have a specific port
-        if (len(urllist) == 2):
-            hostlist = urllist[1].strip('/').split("/")
-            port = 80
-            host = hostlist[0].strip('/')
-            hostlist.pop(0)
-        #has a specific port
-        else:
-            print("here")
-            hostlist = urllist[2].strip('/').split("/")
-            port = hostlist[0]
-            hostlist.pop(0)
-            host = urllist[1].strip('/')
-        print("port: %s" %port)
-
-        print("hostlist: %s" %hostlist)
-        print("host: %s" % host)
-        #get path
-        path = "/"
-        for i in range(0,len(hostlist)):
-            path += hostlist[i]
-            path += "/"
-        print("path: %s" % path)
-        
+        #need to get host, port, path from url
+        host, port, path = self.get_host_port(url)
 
         #GET / HTTP/1.1\r\nHost: host:port\r\nConnection: close\r\n\r\n
         request = "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n" % (path,host)
@@ -109,8 +114,6 @@ class HTTPClient(object):
         print("response: %s" %response)
         code = self.get_code(response)
         body = response
-        #code = 500
-        #body = ""
         clientSocket.close()
         return HTTPResponse(code, body)
 
