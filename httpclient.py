@@ -37,32 +37,81 @@ class HTTPClient(object):
 
     def connect(self, host, port):
         # use sockets!
-        return None
+        print("%s,%s" %(host,port))
+        clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        clientSocket.connect((host,port))
+        print ("connected!")
+        return clientSocket
 
     def get_code(self, data):
-        return None
+        datalist = data.split()
+        code = datalist[1]
+        print("code: %s" %code)
+        return int(code)
 
     def get_headers(self,data):
         return None
 
     def get_body(self, data):
-        return None
+        return ""
 
     # read everything from the socket
     def recvall(self, sock):
-        buffer = bytearray()
+        response = bytearray()
         done = False
-        while not done:
+        while True:
             part = sock.recv(1024)
             if (part):
-                buffer.extend(part)
+                response.extend(part)
             else:
-                done = not part
-        return str(buffer)
+                break
+        return str(response)
 
     def GET(self, url, args=None):
-        code = 500
-        body = ""
+        #need to get host and port from url
+        print("url: %s"% url)
+        urllist = url.split(":")
+        print("urllist: %s" % urllist)
+
+        #doesn't have a specific port
+        if (len(urllist) == 2):
+            hostlist = urllist[1].strip('/').split("/")
+            port = 80
+            host = hostlist[0].strip('/')
+            hostlist.pop(0)
+        #has a specific port
+        else:
+            print("here")
+            hostlist = urllist[2].strip('/').split("/")
+            port = hostlist[0]
+            hostlist.pop(0)
+            host = urllist[1].strip('/')
+        print("port: %s" %port)
+
+        print("hostlist: %s" %hostlist)
+        print("host: %s" % host)
+        #get path
+        path = "/"
+        for i in range(0,len(hostlist)):
+            path += hostlist[i]
+            path += "/"
+        print("path: %s" % path)
+        
+
+        #GET / HTTP/1.1\r\nHost: host:port\r\nConnection: close\r\n\r\n
+        request = "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n" % (path,host)
+        print("request: %s" %request)
+        clientSocket = self.connect(host, int(port))
+        print("back here")
+        clientSocket.sendall(request)
+        print("sent request")
+        response = self.recvall(clientSocket)
+        print("response: %s" %response)
+        code = self.get_code(response)
+        body = response
+        #code = 500
+        #body = ""
+        clientSocket.close()
         return HTTPResponse(code, body)
 
     def POST(self, url, args=None):
@@ -77,12 +126,15 @@ class HTTPClient(object):
             return self.GET( url, args )
     
 if __name__ == "__main__":
+    #fixed by Victor Olivares
     client = HTTPClient()
     command = "GET"
     if (len(sys.argv) <= 1):
         help()
         sys.exit(1)
     elif (len(sys.argv) == 3):
-        print client.command( sys.argv[1], sys.argv[2] )
+        #user command
+        print client.command( sys.argv[2], sys.argv[1] )
     else:
-        print client.command( command, sys.argv[1] )    
+        #GET
+        print client.command( sys.argv[1] )  
