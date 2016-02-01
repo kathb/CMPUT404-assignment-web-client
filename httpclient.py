@@ -10,6 +10,7 @@
 # 
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
+
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
@@ -76,20 +77,26 @@ class HTTPClient(object):
         return clientSocket
 
     def get_code(self, data):
-        datalist = data.split()
-        code = datalist[1]
+        datalist = data.split("\r\n\r\n")
+        header = datalist[0]
+        code = int(header.split()[1])
         #print("code: %s" %code)
         return int(code)
 
     def get_headers(self,data):
-        return None
+        datalist = data.split("\r\n\r\n")
+        header = datalist[0]
+        return header
 
     def get_body(self, data):
-        bodylist = data.split("\n")
-        #print("!!!!!bodylist: %s" %bodylist)
-        #maybe should look for part that starts with {
-        body = bodylist[5]
-        #print("body: %s" %body)
+        datalist = data.split("\r\n\r\n")
+        body = datalist[1]
+        return body
+
+    def get_args(self, data):
+        datalist = data.split("\r\n\r\n")
+        body = datalist[1]
+        #print("body in args: %s" %body)
         return body
 
     # read everything from the socket
@@ -107,18 +114,22 @@ class HTTPClient(object):
     def GET(self, url, args=None):
         #need to get host, port, path from url
         host, port, path = self.get_host_port(url)
-
+        #convert args to url encoding
+        if (args != None):
+            argstring = urllib.urlencode(args)
+        else: 
+            argstring = ""
         #GET / HTTP/1.1\r\nHost: host:port\r\nConnection: close\r\n\r\n
         request = "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n" % (path,host)
+        request += argstring
+        request += "\r\n\r\n"
         #print("request: %s" %request)
         clientSocket = self.connect(host, int(port))
-        #print("back here")
         clientSocket.sendall(request)
-        #print("sent request")
         response = self.recvall(clientSocket)
-        #print("response: %s" %response)
+        print(response)
         code = self.get_code(response)
-        body = response
+        body = self.get_body(response)
         clientSocket.close()
         return HTTPResponse(code, body)
 
@@ -137,6 +148,7 @@ class HTTPClient(object):
         clientSocket = self.connect(host, int(port))
         clientSocket.sendall(request)
         response = self.recvall(clientSocket)
+        print(response)
         code = self.get_code(response)
         body = self.get_body(response)
         clientSocket.close()
